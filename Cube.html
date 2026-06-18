@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Cube</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#111">
+
+<style>
+html,body{
+    margin:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#f5f5f5;
+    touch-action:none;
+}
+
+#cube{
+    position:absolute;
+    width:110px;
+    height:110px;
+    background:#111;
+    border-radius:22px;
+    left:120px;
+    top:120px;
+    transition: left .08s linear, top .08s linear, transform .12s;
+}
+
+.eye{
+    position:absolute;
+    width:28px;
+    height:28px;
+    background:white;
+    border-radius:999px;
+    top:32px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+}
+
+.left{ left:22px; }
+.right{ right:22px; }
+
+.pupil{
+    width:10px;
+    height:10px;
+    background:#111;
+    border-radius:50%;
+    transition:transform .06s linear;
+}
+
+.eye.idle{ transform:scaleY(0.7); }
+.eye.sleep{ transform:scaleY(0.4); opacity:0.9; }
+</style>
+
+</head>
+
+<body>
+
+<div id="cube">
+    <div class="eye left"><div class="pupil"></div></div>
+    <div class="eye right"><div class="pupil"></div></div>
+</div>
+
+<script>
+
+const cube=document.getElementById("cube");
+const eyes=document.querySelectorAll(".eye");
+const pupils=document.querySelectorAll(".pupil");
+
+let dragging=false;
+let idleTimer;
+
+function setIdle(){
+    eyes.forEach(e=>{
+        e.classList.add("idle");
+        e.classList.remove("sleep");
+    });
+}
+
+function setAwake(){
+    eyes.forEach(e=>{
+        e.classList.remove("idle");
+        e.classList.remove("sleep");
+    });
+}
+
+function setSleep(){
+    eyes.forEach(e=>{
+        e.classList.add("sleep");
+    });
+}
+
+function lookAt(x,y){
+
+    const r=cube.getBoundingClientRect();
+
+    const cx=r.left+r.width/2;
+    const cy=r.top+r.height/2;
+
+    const dx=x-cx;
+    const dy=y-cy;
+
+    const len=Math.hypot(dx,dy)||1;
+
+    const px=(dx/len)*6;
+    const py=(dy/len)*6;
+
+    pupils.forEach(p=>{
+        p.style.transform=`translate(${px}px,${py}px)`;
+    });
+
+}
+
+setIdle();
+
+cube.onpointerdown=e=>{
+    dragging=true;
+    cube.setPointerCapture(e.pointerId);
+
+    setAwake();
+    clearTimeout(idleTimer);
+
+    lookAt(e.clientX,e.clientY);
+
+    cube.style.transform="scale(.95)";
+};
+
+cube.onpointermove=e=>{
+    if(!dragging) return;
+
+    lookAt(e.clientX,e.clientY);
+
+    cube.style.left=(e.clientX-cube.offsetWidth/2)+"px";
+    cube.style.top =(e.clientY-cube.offsetHeight/2)+"px";
+};
+
+cube.onpointerup=e=>{
+    dragging=false;
+    cube.releasePointerCapture(e.pointerId);
+
+    cube.style.transform="scale(1)";
+    setIdle();
+
+    idleTimer=setTimeout(()=>{
+        setSleep();
+    },2000);
+};
+
+document.addEventListener("pointermove",e=>{
+    if(dragging) return;
+    lookAt(e.clientX,e.clientY);
+});
+
+/* PWA 등록 */
+if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('service-worker.js');
+}
+
+</script>
+
+</body>
+</html>
